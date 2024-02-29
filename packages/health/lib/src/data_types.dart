@@ -419,6 +419,7 @@ enum HealthWorkoutActivityType {
 
   //
   OTHER,
+  UNRECOGNIZED,
 }
 
 enum ElectrocardiogramClassification {
