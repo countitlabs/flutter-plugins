@@ -136,8 +136,8 @@ class WorkoutHealthValue extends HealthValue {
 
   factory WorkoutHealthValue.fromJson(json) {
     return WorkoutHealthValue(
-        HealthWorkoutActivityType.values.firstWhere(
-            (element) => element.name == json['workoutActivityType']),
+        HealthWorkoutActivityType.values.firstWhereOrNull(
+            (element) => element.name == json['workoutActivityType']) ?? HealthWorkoutActivityType.UNRECOGNIZED,
         json['totalEnergyBurned'] != null
             ? (json['totalEnergyBurned'] as num).toInt()
             : null,

@@ -453,6 +453,7 @@ enum HealthWorkoutActivityType {
 
   //
   OTHER,
+  UNRECOGNIZED,
 }
 
 enum MealType {
