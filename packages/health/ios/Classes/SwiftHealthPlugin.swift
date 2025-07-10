@@ -594,6 +594,7 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
                 let dictionaries = samples.map { sample -> NSDictionary in
                     return [
                         "uuid": "\(sample.uuid)",
+                        "activityName": sample.sampleType.identifier,
                         "value": sample.quantity.doubleValue(for: unit!),
                         "date_from": Int(sample.startDate.timeIntervalSince1970 * 1000),
                         "date_to": Int(sample.endDate.timeIntervalSince1970 * 1000),
@@ -640,6 +641,7 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
                 let categories = samplesCategory.map { sample -> NSDictionary in
                     return [
                         "uuid": "\(sample.uuid)",
+                        "activityName": sample.sampleType.identifier,
                         "value": sample.value,
                         "date_from": Int(sample.startDate.timeIntervalSince1970 * 1000),
                         "date_to": Int(sample.endDate.timeIntervalSince1970 * 1000),
@@ -654,8 +656,10 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
             case let (samplesWorkout as [HKWorkout]) as Any:
                 
                 let dictionaries = samplesWorkout.map { sample -> NSDictionary in
+                    let activityName = String(describing: sample.workoutActivityType)
                     return [
                         "uuid": "\(sample.uuid)",
+                        "activityName": activityName,
                         "workoutActivityType": workoutActivityTypeMap.first(where: {
                             $0.value == sample.workoutActivityType
                         })?.key,
@@ -688,6 +692,7 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
                     }
                     return [
                         "uuid": "\(sample.uuid)",
+                        "activityName": sample.sampleType.identifier,
                         "frequencies": frequencies,
                         "leftEarSensitivities": leftEarSensitivities,
                         "rightEarSensitivities": rightEarSensitivities,
@@ -733,6 +738,7 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
                 let dictionaries = nutritionSample.map { sample -> NSDictionary in
                     return [
                         "uuid": "\(sample.uuid)",
+                        "activityName": sample.sampleType.identifier,
                         "calories": calories,
                         "carbs": carbs,
                         "protein": protein,
@@ -789,6 +795,7 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
         semaphore.wait()
         return [
             "uuid": "\(sample.uuid)",
+            "activityName": sample.sampleType.identifier,
             "voltageValues": voltageValues,
             "averageHeartRate": sample.averageHeartRate?.doubleValue(
                 for: HKUnit.count().unitDivided(by: HKUnit.minute())),

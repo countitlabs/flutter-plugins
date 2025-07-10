@@ -107,13 +107,15 @@ class WorkoutHealthValue extends HealthValue {
   HealthDataUnit? _totalEnergyBurnedUnit;
   int? _totalDistance;
   HealthDataUnit? _totalDistanceUnit;
+  String? _activityName;
 
   WorkoutHealthValue(
       this._workoutActivityType,
       this._totalEnergyBurned,
       this._totalEnergyBurnedUnit,
       this._totalDistance,
-      this._totalDistanceUnit);
+      this._totalDistanceUnit,
+      this._activityName);
 
   /// The type of the workout.
   HealthWorkoutActivityType get workoutActivityType => _workoutActivityType;
@@ -121,6 +123,10 @@ class WorkoutHealthValue extends HealthValue {
   /// The total energy burned during the workout.
   /// Might not be available for all workouts.
   int? get totalEnergyBurned => _totalEnergyBurned;
+
+
+  // The name of the activity, if available.
+  String? get activityName => _activityName;
 
   /// The unit of the total energy burned during the workout.
   /// Might not be available for all workouts.
@@ -151,7 +157,9 @@ class WorkoutHealthValue extends HealthValue {
         json['totalDistanceUnit'] != null
             ? HealthDataUnit.values.firstWhere(
                 (element) => element.name == json['totalDistanceUnit'])
-            : null);
+            : null,
+        json['activityName'] as String?
+            );
   }
 
   @override
@@ -169,7 +177,9 @@ class WorkoutHealthValue extends HealthValue {
            totalEnergyBurned: $totalEnergyBurned,
            totalEnergyBurnedUnit: ${totalEnergyBurnedUnit?.name},
            totalDistance: $totalDistance,
-           totalDistanceUnit: ${totalDistanceUnit?.name}""";
+           totalDistanceUnit: ${totalDistanceUnit?.name},
+           activityName: $activityName
+           """;
   }
 
   @override
@@ -179,12 +189,13 @@ class WorkoutHealthValue extends HealthValue {
         this.totalEnergyBurned == o.totalEnergyBurned &&
         this.totalEnergyBurnedUnit == o.totalEnergyBurnedUnit &&
         this.totalDistance == o.totalDistance &&
-        this.totalDistanceUnit == o.totalDistanceUnit;
+        this.totalDistanceUnit == o.totalDistanceUnit &&
+        this.activityName == o.activityName;
   }
 
   @override
   int get hashCode => Object.hash(workoutActivityType, totalEnergyBurned,
-      totalEnergyBurnedUnit, totalDistance, totalDistanceUnit);
+      totalEnergyBurnedUnit, totalDistance, totalDistanceUnit, activityName);
 }
 
 /// A [HealthValue] object for ECGs
