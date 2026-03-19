@@ -855,7 +855,7 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
         
         HKHealthStore().execute(query)
     }
-    
+
     func getTotalStepsInInterval(call: FlutterMethodCall, result: @escaping FlutterResult) {
         let arguments = call.arguments as? NSDictionary
         let startTime = (arguments?["startTime"] as? NSNumber) ?? 0
@@ -867,38 +867,46 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
         
         let sampleType = HKQuantityType.quantityType(forIdentifier: .stepCount)!
         let predicate = HKQuery.predicateForSamples(
-            withStart: dateFrom, end: dateTo, options: .strictStartDate)
-        
-        let query = HKStatisticsQuery(
+            withStart: dateFrom, end: dateTo)
+
+        let query = HKStatisticsCollectionQuery(
             quantityType: sampleType,
             quantitySamplePredicate: predicate,
-            options: .cumulativeSum
-        ) { query, queryResult, error in
-            
-            guard let queryResult = queryResult else {
-                let error = error! as NSError
-                print("Error getting total steps in interval \(error.localizedDescription)")
-                
+            options: .cumulativeSum,
+            anchorDate: dateFrom,
+            intervalComponents: DateComponents(day: 1)
+        )
+
+        query.initialResultsHandler = { _, results, error in
+            guard let results else {
+                let errorMessage = error?.localizedDescription ?? "Unknown error"
                 DispatchQueue.main.async {
-                    result(nil)
+                    result(
+                        FlutterError(
+                            code: "STEPS_ERROR",
+                            message: "Error getting step count: \(errorMessage)",
+                            details: nil
+                        )
+                    )
                 }
                 return
             }
-            
-            var steps = 0.0
-            
-            if let quantity = queryResult.sumQuantity() {
-                let unit = HKUnit.count()
-                steps = quantity.doubleValue(for: unit)
+
+            var totalSteps = 0.0
+            results.enumerateStatistics(from: dateFrom, to: dateTo) { statistics, _ in
+                if let quantity = statistics.sumQuantity() {
+                    let unit = HKUnit.count()
+                    totalSteps += quantity.doubleValue(for: unit)
+                }
             }
-            
-            let totalSteps = Int(steps)
+
             DispatchQueue.main.async {
-                result(totalSteps)
+                result(Int(totalSteps))
             }
         }
-        
-        HKHealthStore().execute(query)
+
+        healthStore.execute(query)
+
     }
     
     func unitLookUp(key: String) -> HKUnit {
