@@ -148,6 +148,10 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
             getTotalStepsInInterval(call: call, result: result)
         }
         
+        else if call.method.elementsEqual("getTotalDistanceInterval") {
+            getTotalDistanceInterval(call: call, result: result)
+        }
+        
         /// Handle writeData
         else if call.method.elementsEqual("writeData") {
             try! writeData(call: call, result: result)
@@ -806,6 +810,50 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
             "source_id": sample.sourceRevision.source.bundleIdentifier,
             "source_name": sample.sourceRevision.source.name,
         ]
+    }
+    
+    func getTotalDistanceInterval(call: FlutterMethodCall, result: @escaping FlutterResult) {
+        let arguments = call.arguments as? NSDictionary
+        let startTime = (arguments?["startTime"] as? NSNumber) ?? 0
+        let endTime = (arguments?["endTime"] as? NSNumber) ?? 0
+        
+        // Convert dates from milliseconds to Date()
+        let dateFrom = Date(timeIntervalSince1970: startTime.doubleValue / 1000)
+        let dateTo = Date(timeIntervalSince1970: endTime.doubleValue / 1000)
+        
+        let type = HKQuantityType.quantityType(forIdentifier: .distanceWalkingRunning)!
+        let predicate = HKQuery.predicateForSamples(
+            withStart: dateFrom, end: dateTo, options: .strictStartDate)
+        
+        let query = HKStatisticsQuery(
+            quantityType: type,
+            quantitySamplePredicate: predicate,
+            options: .cumulativeSum
+        ) { query, queryResult, error in
+            
+            guard let queryResult = queryResult else {
+                let error = error! as NSError
+                print("Error getting total distance in interval \(error.localizedDescription)")
+                
+                DispatchQueue.main.async {
+                    result(nil)
+                }
+                return
+            }
+            
+            var distance = 0.0
+            
+            if let quantity = queryResult.sumQuantity() {
+                let unit = HKUnit.meter()
+                distance = quantity.doubleValue(for: unit)
+            }
+            let total =  distance
+            DispatchQueue.main.async {
+                result(total)
+            }
+        }
+        
+        HKHealthStore().execute(query)
     }
     
     func getTotalStepsInInterval(call: FlutterMethodCall, result: @escaping FlutterResult) {

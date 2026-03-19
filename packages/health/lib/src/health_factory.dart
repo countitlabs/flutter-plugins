@@ -564,6 +564,23 @@ class HealthFactory {
     return LinkedHashSet.of(points).toList();
   }
 
+  // Get the total distance within a specific time period.
+  /// Returns null if not successful.
+  Future<double?> getTotalDistanceInterval(
+    DateTime startTime,
+    DateTime endTime,
+  ) async {
+    final args = <String, dynamic>{
+      'startTime': startTime.millisecondsSinceEpoch,
+      'endTime': endTime.millisecondsSinceEpoch
+    };
+    final response = await _channel.invokeMethod<double?>(
+      'getTotalDistanceInterval',
+      args,
+    );
+    return response;
+  }
+
   /// Get the total numbner of steps within a specific time period.
   /// Returns null if not successful.
   ///
