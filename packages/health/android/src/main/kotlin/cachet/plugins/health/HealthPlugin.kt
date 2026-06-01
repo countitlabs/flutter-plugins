@@ -349,19 +349,32 @@ class HealthPlugin:
     }
 
 
-    /**
-     * Calculate the duration of a workout session in seconds, using the active time if available, 
-     * otherwise using the start and end time
-     */
-    private fun getWorkoutDurationSeconds(session: Session): Double {
-    val durationMillis = if (session.hasActiveTime()) {
-        session.getActiveTime(TimeUnit.MILLISECONDS)
-    } else {
-        session.getEndTime(TimeUnit.MILLISECONDS) -
-            session.getStartTime(TimeUnit.MILLISECONDS)
+    private fun getWorkoutDurationEndTimeMillis(session: Session): Long {
+        return if (session.isOngoing()) {
+            System.currentTimeMillis()
+        } else {
+            session.getEndTime(TimeUnit.MILLISECONDS)
+        }
     }
 
-    return durationMillis / 1000.0
+    /**
+     * Calculate the duration of a workout session in seconds, using the active time if available,
+     * otherwise using the start and effective end time.
+     */
+    private fun getWorkoutDurationSeconds(session: Session): Double {
+        val activeTime = if (session.hasActiveTime()) {
+            session.getActiveTime(TimeUnit.MILLISECONDS)
+        } else {
+            0L
+        }
+
+        val durationMillis = if (activeTime > 0) {
+            activeTime
+        } else {
+            getWorkoutDurationEndTimeMillis(session) - session.getStartTime(TimeUnit.MILLISECONDS)
+        }
+
+        return durationMillis.coerceAtLeast(0L) / 1000.0
     }
 
     /**
