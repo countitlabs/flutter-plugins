@@ -348,6 +348,22 @@ class HealthPlugin:
         }
     }
 
+
+    /**
+     * Calculate the duration of a workout session in seconds, using the active time if available, 
+     * otherwise using the start and end time
+     */
+    private fun getWorkoutDurationSeconds(session: Session): Double {
+    val durationMillis = if (session.hasActiveTime()) {
+        session.getActiveTime(TimeUnit.MILLISECONDS)
+    } else {
+        session.getEndTime(TimeUnit.MILLISECONDS) -
+            session.getStartTime(TimeUnit.MILLISECONDS)
+    }
+
+    return durationMillis / 1000.0
+    }
+
     /**
      * Delete records of the given type in the time range
      */
@@ -1055,6 +1071,8 @@ class HealthPlugin:
                                 workoutTypeMap.filterValues { it == session.activity }.keys.firstOrNull()
                                     ?: "OTHER"
                                 ),
+                        "duration" to getWorkoutDurationSeconds(session),
+                        "durationUnit" to "SECONDS",
                         "totalEnergyBurned" to if (totalEnergyBurned == 0.0) null else totalEnergyBurned,
                         "totalEnergyBurnedUnit" to "KILOCALORIE",
                         "totalDistance" to if (totalDistance == 0.0) null else totalDistance,

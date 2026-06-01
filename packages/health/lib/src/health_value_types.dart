@@ -102,6 +102,8 @@ class AudiogramHealthValue extends HealthValue {
 /// * [totalDistance] - the total distance of the workout
 /// * [totalDistanceUnit] - the unit of the total distance
 class WorkoutHealthValue extends HealthValue {
+  final double? _duration;
+  final String? _durationUnit;
   HealthWorkoutActivityType _workoutActivityType;
   int? _totalEnergyBurned;
   HealthDataUnit? _totalEnergyBurnedUnit;
@@ -110,12 +112,20 @@ class WorkoutHealthValue extends HealthValue {
   String? _activityName;
 
   WorkoutHealthValue(
+      this._duration,
+      this._durationUnit,
       this._workoutActivityType,
       this._totalEnergyBurned,
       this._totalEnergyBurnedUnit,
       this._totalDistance,
       this._totalDistanceUnit,
       this._activityName);
+
+  /// The duration of the workout in seconds.
+  double? get duration => _duration;
+
+  /// The unit of the duration of the workout.
+  String? get durationUnit => _durationUnit;
 
   /// The type of the workout.
   HealthWorkoutActivityType get workoutActivityType => _workoutActivityType;
@@ -142,6 +152,8 @@ class WorkoutHealthValue extends HealthValue {
 
   factory WorkoutHealthValue.fromJson(json) {
     return WorkoutHealthValue(
+        json['duration'] != null ? (json['duration'] as num).toDouble() : null,
+        json['durationUnit'] != null ? (json['durationUnit'] as String).toLowerCase() : null,
         HealthWorkoutActivityType.values.firstWhereOrNull(
             (element) => element.name == json['workoutActivityType']) ?? HealthWorkoutActivityType.UNRECOGNIZED,
         json['totalEnergyBurned'] != null
@@ -164,6 +176,8 @@ class WorkoutHealthValue extends HealthValue {
 
   @override
   Map<String, dynamic> toJson() => {
+        'duration': duration,
+        'durationUnit': durationUnit?.toLowerCase(),
         'workoutActivityType': _workoutActivityType.name,
         'totalEnergyBurned': _totalEnergyBurned,
         'totalEnergyBurnedUnit': _totalEnergyBurnedUnit?.name,
@@ -173,7 +187,10 @@ class WorkoutHealthValue extends HealthValue {
 
   @override
   String toString() {
-    return """workoutActivityType: ${workoutActivityType.name},
+    return """
+           duration: ${duration.toString()},
+           durationUnit: ${durationUnit.toString().toLowerCase()},
+           workoutActivityType: ${workoutActivityType.name},
            totalEnergyBurned: $totalEnergyBurned,
            totalEnergyBurnedUnit: ${totalEnergyBurnedUnit?.name},
            totalDistance: $totalDistance,
