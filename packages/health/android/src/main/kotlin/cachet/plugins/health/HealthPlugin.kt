@@ -1085,7 +1085,7 @@ class HealthPlugin:
                                     ?: "OTHER"
                                 ),
                         "duration" to getWorkoutDurationSeconds(session),
-                        "durationUnit" to "SECONDS",
+                        "durationUnit" to "SECOND",
                         "totalEnergyBurned" to if (totalEnergyBurned == 0.0) null else totalEnergyBurned,
                         "totalEnergyBurnedUnit" to "KILOCALORIE",
                         "totalDistance" to if (totalDistance == 0.0) null else totalDistance,

@@ -676,7 +676,7 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
                         "source_id": sample.sourceRevision.source.bundleIdentifier,
                         "source_name": sample.sourceRevision.source.name,
                         "duration": sample.duration,
-                        "durationUnit": "SECONDS",
+                        "durationUnit": "SECOND",
                     ]
                 }
                 
