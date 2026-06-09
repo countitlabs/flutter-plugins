@@ -3,6 +3,14 @@ import Flutter
 import HealthKit
 import UIKit
 
+/// String codes used as the `code` field of [FlutterError] for HealthKit errors.
+/// These must stay in sync with `HealthKitErrorCode` in the Dart layer.
+enum HealthKitErrorCodes {
+    static let databaseInaccessible = "HEALTHKIT_DATABASE_INACCESSIBLE"
+    static let error                = "HEALTHKIT_ERROR"
+    static let unknown              = "HEALTHKIT_UNKNOWN_ERROR"
+}
+
 public class SwiftHealthPlugin: NSObject, FlutterPlugin {
     
     let healthStore = HKHealthStore()
@@ -1199,15 +1207,8 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
 
         query.initialResultsHandler = { _, results, error in
             guard let results else {
-                let errorMessage = error?.localizedDescription ?? "Unknown error"
                 DispatchQueue.main.async {
-                    result(
-                        FlutterError(
-                            code: "STEPS_ERROR",
-                            message: "Error getting step count: \(errorMessage)",
-                            details: nil
-                        )
-                    )
+                    result(self.mapHealthKitError(error))
                 }
                 return
             }
@@ -1482,5 +1483,36 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
         // Concatenate heart events, headache and health data types (both may be empty)
         allDataTypes = Set(heartRateEventTypes + healthDataTypes)
         allDataTypes = allDataTypes.union(headacheType)
+    }
+
+    private func mapHealthKitError(_ error: Error?) -> FlutterError {
+        guard let error = error else {
+            return FlutterError(
+                code: HealthKitErrorCodes.unknown,
+                message: "Unknown HealthKit error",
+                details: nil
+            )
+        }
+
+        let nsError = error as NSError
+
+        if let hkError = error as? HKError {
+            switch hkError.code {
+            case .errorDatabaseInaccessible:
+                return FlutterError(
+                    code: HealthKitErrorCodes.databaseInaccessible,
+                    message: nsError.localizedDescription,
+                    details: nil
+                )
+            default:
+                break
+            }
+        }
+
+        return FlutterError(
+            code: HealthKitErrorCodes.error,
+            message: nsError.localizedDescription,
+            details: nil
+        )
     }
 }
