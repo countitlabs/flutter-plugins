@@ -797,6 +797,10 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
         HKHealthStore().execute(query)
     }
 
+    // processWorkoutRouteSamples and the first buildWorkoutRouteDictionary
+    // overload below are adapted from @carp-dk/carp-health-flutter v13.3.1
+    // (ios/Classes/HealthDataReader.swift)
+    // https://github.com/carp-dk/carp-health-flutter
     private func processWorkoutRouteSamples(
         _ routeSamples: [HKWorkoutRoute],
         result: @escaping FlutterResult

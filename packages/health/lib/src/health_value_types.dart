@@ -394,6 +394,10 @@ class NutritionHealthValue extends HealthValue {
   int get hashCode => Object.hash(protein, calories, fat, name, carbs);
 }
 
+// WorkoutRouteLocation and WorkoutRouteHealthValue below are adapted from
+// @carp-dk/carp-health-flutter v13.3.1 (lib/src/health_value_types.dart)
+// https://github.com/carp-dk/carp-health-flutter
+
 /// A single GPS point of a [WorkoutRouteHealthValue].
 ///
 /// Parameters:
