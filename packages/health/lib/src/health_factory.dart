@@ -146,10 +146,25 @@ class HealthFactory {
     // on Android, if BMI is requested, then also ask for weight and height
     if (_platformType == PlatformType.ANDROID) _handleBMI(mTypes, mPermissions);
 
+    // if WORKOUT_ROUTE is requested, also ask for WORKOUT permission
+    _handleWorkoutRoute(mTypes, mPermissions);
+
     List<String> keys = mTypes.map((e) => e.name).toList();
     final bool? isAuthorized = await _channel.invokeMethod(
         'requestAuthorization', {'types': keys, "permissions": mPermissions});
     return isAuthorized ?? false;
+  }
+
+  /// Ensures WORKOUT permission is requested whenever WORKOUT_ROUTE is requested.
+  static void _handleWorkoutRoute(
+      List<HealthDataType> mTypes, List<int> mPermissions) {
+    final index = mTypes.indexOf(HealthDataType.WORKOUT_ROUTE);
+    if (index == -1) return;
+
+    if (!mTypes.contains(HealthDataType.WORKOUT)) {
+      mTypes.add(HealthDataType.WORKOUT);
+      mPermissions.add(mPermissions[index]);
+    }
   }
 
   /// Obtains health and weight if BMI is requested on Android.
@@ -449,6 +464,33 @@ class HealthFactory {
     return success ?? false;
   }
 
+  /// Fetches the GPS route recorded for a specific workout, identified by
+  /// [workoutUuid] (see [HealthDataPoint.uuid] on a [HealthDataType.WORKOUT]
+  /// data point).
+  ///
+  /// This looks up the route associated to that exact workout in HealthKit
+  /// (via `HKQuery.predicateForObjects(from:)`), so it works for workouts
+  /// recorded by the Apple Watch or any other app, not just ones written by
+  /// this plugin.
+  ///
+  /// Returns `null` if no workout with [workoutUuid] exists, or if that
+  /// workout has no associated route (e.g. an indoor workout without GPS).
+  ///
+  /// <mark>iOS ONLY</mark>.
+  Future<WorkoutRouteHealthValue?> getWorkoutRoute(String workoutUuid) async {
+    if (_platformType != PlatformType.IOS) {
+      throw UnsupportedError('getWorkoutRoute is only supported on iOS');
+    }
+
+    final route = await _channel.invokeMapMethod<String, dynamic>(
+      'getWorkoutRoute',
+      {'workoutUUID': workoutUuid},
+    );
+
+    if (route == null) return null;
+    return WorkoutRouteHealthValue.fromJson(route);
+  }
+
   /// Fetch a list of health data points based on [types].
   Future<List<HealthDataPoint>> getHealthDataFromTypes(
       DateTime startTime, DateTime endTime, List<HealthDataType> types) async {
@@ -531,6 +573,8 @@ class HealthFactory {
         value = AudiogramHealthValue.fromJson(e);
       } else if (dataType == HealthDataType.WORKOUT) {
         value = WorkoutHealthValue.fromJson(e);
+      } else if (dataType == HealthDataType.WORKOUT_ROUTE) {
+        value = WorkoutRouteHealthValue.fromJson(e);
       } else if (dataType == HealthDataType.ELECTROCARDIOGRAM) {
         value = ElectrocardiogramHealthValue.fromJson(e);
       } else if (dataType == HealthDataType.NUTRITION) {
@@ -542,6 +586,7 @@ class HealthFactory {
       final DateTime to = DateTime.fromMillisecondsSinceEpoch(e['date_to']);
       final String sourceId = e["source_id"];
       final String sourceName = e["source_name"];
+      final String? uuid = e["uuid"] as String?;
       return HealthDataPoint(
         value,
         dataType,
@@ -552,6 +597,7 @@ class HealthFactory {
         device,
         sourceId,
         sourceName,
+        uuid,
       );
     }).toList();
 

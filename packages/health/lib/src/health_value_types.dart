@@ -394,6 +394,144 @@ class NutritionHealthValue extends HealthValue {
   int get hashCode => Object.hash(protein, calories, fat, name, carbs);
 }
 
+/// A single GPS point of a [WorkoutRouteHealthValue].
+///
+/// Parameters:
+/// * [latitude] - the latitude of the point
+/// * [longitude] - the longitude of the point
+/// * [timestamp] - when the point was recorded
+/// * [altitude] - the altitude at the point, if available
+/// * [horizontalAccuracy] - the horizontal accuracy of the point, if available
+/// * [verticalAccuracy] - the vertical accuracy of the point, if available
+/// * [speed] - the speed at the point, if available
+/// * [speedAccuracy] - the speed accuracy of the point, if available
+/// * [course] - the course (heading) at the point, if available
+/// * [courseAccuracy] - the course accuracy of the point, if available
+class WorkoutRouteLocation {
+  final double latitude;
+  final double longitude;
+  final DateTime timestamp;
+  final double? altitude;
+  final double? horizontalAccuracy;
+  final double? verticalAccuracy;
+  final double? speed;
+  final double? speedAccuracy;
+  final double? course;
+  final double? courseAccuracy;
+
+  WorkoutRouteLocation({
+    required this.latitude,
+    required this.longitude,
+    required this.timestamp,
+    this.altitude,
+    this.horizontalAccuracy,
+    this.verticalAccuracy,
+    this.speed,
+    this.speedAccuracy,
+    this.course,
+    this.courseAccuracy,
+  });
+
+  factory WorkoutRouteLocation.fromJson(json) => WorkoutRouteLocation(
+        latitude: (json['latitude'] as num).toDouble(),
+        longitude: (json['longitude'] as num).toDouble(),
+        timestamp:
+            DateTime.fromMillisecondsSinceEpoch(json['timestamp'] as int),
+        altitude: (json['altitude'] as num?)?.toDouble(),
+        horizontalAccuracy: (json['horizontalAccuracy'] as num?)?.toDouble(),
+        verticalAccuracy: (json['verticalAccuracy'] as num?)?.toDouble(),
+        speed: (json['speed'] as num?)?.toDouble(),
+        speedAccuracy: (json['speedAccuracy'] as num?)?.toDouble(),
+        course: (json['course'] as num?)?.toDouble(),
+        courseAccuracy: (json['courseAccuracy'] as num?)?.toDouble(),
+      );
+
+  Map<String, dynamic> toJson() => {
+        'latitude': latitude,
+        'longitude': longitude,
+        'timestamp': timestamp.millisecondsSinceEpoch,
+        'altitude': altitude,
+        'horizontalAccuracy': horizontalAccuracy,
+        'verticalAccuracy': verticalAccuracy,
+        'speed': speed,
+        'speedAccuracy': speedAccuracy,
+        'course': course,
+        'courseAccuracy': courseAccuracy,
+      };
+
+  @override
+  bool operator ==(Object o) =>
+      o is WorkoutRouteLocation &&
+      latitude == o.latitude &&
+      longitude == o.longitude &&
+      timestamp == o.timestamp &&
+      altitude == o.altitude &&
+      horizontalAccuracy == o.horizontalAccuracy &&
+      verticalAccuracy == o.verticalAccuracy &&
+      speed == o.speed &&
+      speedAccuracy == o.speedAccuracy &&
+      course == o.course &&
+      courseAccuracy == o.courseAccuracy;
+
+  @override
+  int get hashCode => Object.hash(
+      latitude,
+      longitude,
+      timestamp,
+      altitude,
+      horizontalAccuracy,
+      verticalAccuracy,
+      speed,
+      speedAccuracy,
+      course,
+      courseAccuracy);
+
+  @override
+  String toString() => 'lat: $latitude, lng: $longitude, timestamp: $timestamp';
+}
+
+/// A [HealthValue] object for a GPS route recorded during a workout.
+///
+/// Parameters:
+/// * [locations] - ordered list of [WorkoutRouteLocation] samples.
+/// * [workoutUuid] - the id of the workout this route belongs to, if known.
+///   Only populated when the route metadata carries a `workout_uuid` entry
+///   (e.g. when written by this plugin); routes recorded by other sources
+///   (Apple Watch, third-party apps) do not carry this association.
+class WorkoutRouteHealthValue extends HealthValue {
+  List<WorkoutRouteLocation> locations;
+  String? workoutUuid;
+
+  WorkoutRouteHealthValue({required this.locations, this.workoutUuid});
+
+  factory WorkoutRouteHealthValue.fromJson(json) {
+    final rawRoute = json['route'] as List? ?? [];
+    return WorkoutRouteHealthValue(
+      locations: rawRoute.map((e) => WorkoutRouteLocation.fromJson(e)).toList(),
+      workoutUuid: json['workout_uuid'] as String?,
+    );
+  }
+
+  @override
+  Map<String, dynamic> toJson() => {
+        'route': locations.map((e) => e.toJson()).toList(),
+        'workoutUuid': workoutUuid,
+      };
+
+  @override
+  String toString() =>
+      '$runtimeType - locations: ${locations.length} samples, workoutUuid: $workoutUuid';
+
+  @override
+  bool operator ==(Object o) =>
+      o is WorkoutRouteHealthValue &&
+      listEquals(locations, o.locations) &&
+      workoutUuid == o.workoutUuid;
+
+  @override
+  int get hashCode => Object.hash(Object.hashAll(locations), workoutUuid);
+}
+
 /// An abstract class for health values.
 abstract class HealthValue {
   Map<String, dynamic> toJson();

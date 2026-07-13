@@ -12,6 +12,7 @@ class HealthDataPoint {
   String _deviceId;
   String _sourceId;
   String _sourceName;
+  String? _uuid;
 
   HealthDataPoint(
       this._value,
@@ -22,7 +23,8 @@ class HealthDataPoint {
       this._platform,
       this._deviceId,
       this._sourceId,
-      this._sourceName) {
+      this._sourceName,
+      [this._uuid]) {
     // set the value to minutes rather than the category
     // returned by the native API
     if (type == HealthDataType.MINDFULNESS ||
@@ -55,6 +57,8 @@ class HealthDataPoint {
       healthValue = AudiogramHealthValue.fromJson(json['value']);
     } else if (json['data_type'] == 'WORKOUT') {
       healthValue = WorkoutHealthValue.fromJson(json['value']);
+    } else if (json['data_type'] == 'WORKOUT_ROUTE') {
+      healthValue = WorkoutRouteHealthValue.fromJson(json['value']);
     } else {
       healthValue = NumericHealthValue.fromJson(json['value']);
     }
@@ -72,7 +76,8 @@ class HealthDataPoint {
             .indexOf(json['platform_type'])],
         json['device_id'],
         json['source_id'],
-        json['source_name']);
+        json['source_name'],
+        json['uuid'] as String?);
   }
 
   /// Converts the [HealthDataPoint] to a json object
@@ -85,7 +90,8 @@ class HealthDataPoint {
         'platform_type': PlatformTypeJsonValue[platform],
         'device_id': deviceId,
         'source_id': sourceId,
-        'source_name': sourceName
+        'source_name': sourceName,
+        'uuid': uuid,
       };
 
   @override
@@ -98,7 +104,8 @@ class HealthDataPoint {
     platform: $platform,
     deviceId: $deviceId,
     sourceId: $sourceId,
-    sourceName: $sourceName""";
+    sourceName: $sourceName,
+    uuid: $uuid""";
 
   /// The quantity value of the data point
   HealthValue get value => _value;
@@ -133,6 +140,11 @@ class HealthDataPoint {
   /// The name of the source from which the data point was fetched.
   String get sourceName => _sourceName;
 
+  /// The HealthKit/Health Connect id of this data point, if the platform
+  /// provided one. Used e.g. to look up the route of a WORKOUT via
+  /// [HealthFactory.getWorkoutRoute].
+  String? get uuid => _uuid;
+
   @override
   bool operator ==(Object o) {
     return o is HealthDataPoint &&
@@ -144,10 +156,11 @@ class HealthDataPoint {
         this.platform == o.platform &&
         this.deviceId == o.deviceId &&
         this.sourceId == o.sourceId &&
-        this.sourceName == o.sourceName;
+        this.sourceName == o.sourceName &&
+        this.uuid == o.uuid;
   }
 
   @override
   int get hashCode => Object.hash(value, unit, dateFrom, dateTo, type, platform,
-      deviceId, sourceId, sourceName);
+      deviceId, sourceId, sourceName, uuid);
 }

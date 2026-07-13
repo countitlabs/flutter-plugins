@@ -43,6 +43,7 @@ enum HealthDataType {
   SLEEP_SESSION,
   EXERCISE_TIME,
   WORKOUT,
+  WORKOUT_ROUTE,
   HEADACHE_NOT_PRESENT,
   HEADACHE_MILD,
   HEADACHE_MODERATE,
@@ -107,6 +108,7 @@ const List<HealthDataType> _dataTypeKeysIOS = [
   HealthDataType.WATER,
   HealthDataType.EXERCISE_TIME,
   HealthDataType.WORKOUT,
+  HealthDataType.WORKOUT_ROUTE,
   HealthDataType.HEADACHE_NOT_PRESENT,
   HealthDataType.HEADACHE_MILD,
   HealthDataType.HEADACHE_MODERATE,
@@ -193,6 +195,7 @@ const Map<HealthDataType, HealthDataUnit> _dataTypeToUnit = {
   HealthDataType.MINDFULNESS: HealthDataUnit.MINUTE,
   HealthDataType.EXERCISE_TIME: HealthDataUnit.MINUTE,
   HealthDataType.WORKOUT: HealthDataUnit.NO_UNIT,
+  HealthDataType.WORKOUT_ROUTE: HealthDataUnit.NO_UNIT,
 
   HealthDataType.HEADACHE_NOT_PRESENT: HealthDataUnit.MINUTE,
   HealthDataType.HEADACHE_MILD: HealthDataUnit.MINUTE,

@@ -1,3 +1,4 @@
+import CoreLocation
 import Flutter
 import HealthKit
 import UIKit
@@ -55,6 +56,7 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
     
     let EXERCISE_TIME = "EXERCISE_TIME"
     let WORKOUT = "WORKOUT"
+    let WORKOUT_ROUTE = "WORKOUT_ROUTE"
     let HEADACHE_UNSPECIFIED = "HEADACHE_UNSPECIFIED"
     let HEADACHE_NOT_PRESENT = "HEADACHE_NOT_PRESENT"
     let HEADACHE_MILD = "HEADACHE_MILD"
@@ -141,6 +143,11 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
         /// Handle getData
         else if call.method.elementsEqual("getData") {
             getData(call: call, result: result)
+        }
+
+        /// Handle getWorkoutRoute
+        else if call.method.elementsEqual("getWorkoutRoute") {
+            getWorkoutRoute(call: call, result: result)
         }
         
         /// Handle getTotalStepsInInterval
@@ -592,7 +599,18 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
         ) {
             [self]
             x, samplesOrNil, error in
-            
+
+            if dataTypeKey == self.WORKOUT_ROUTE {
+                guard let routeSamples = samplesOrNil as? [HKWorkoutRoute] else {
+                    DispatchQueue.main.async {
+                        result([])
+                    }
+                    return
+                }
+                self.processWorkoutRouteSamples(routeSamples, result: result)
+                return
+            }
+
             switch samplesOrNil {
             case let (samples as [HKQuantitySample]) as Any:
                 let dictionaries = samples.map { sample -> NSDictionary in
@@ -778,7 +796,294 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
         
         HKHealthStore().execute(query)
     }
-    
+
+    private func processWorkoutRouteSamples(
+        _ routeSamples: [HKWorkoutRoute],
+        result: @escaping FlutterResult
+    ) {
+        if routeSamples.isEmpty {
+            DispatchQueue.main.async {
+                result([])
+            }
+            return
+        }
+
+        let dispatchGroup = DispatchGroup()
+        let synchronizationQueue = DispatchQueue(label: "cachet.plugins.health.workoutroute")
+
+        var routeDictionaries = [NSDictionary]()
+        var capturedError: Error?
+
+        for route in routeSamples {
+            dispatchGroup.enter()
+            self.collectLocations(for: [route]) { [weak self] locationsOrNil, error in
+                synchronizationQueue.async {
+                    if let error = error {
+                        if capturedError == nil {
+                            capturedError = error
+                        }
+                    } else if let strongSelf = self {
+                        routeDictionaries.append(
+                            strongSelf.buildWorkoutRouteDictionary(route: route, locations: locationsOrNil ?? []))
+                    }
+                    dispatchGroup.leave()
+                }
+            }
+        }
+
+        dispatchGroup.notify(queue: .main) {
+            if let error = capturedError {
+                result(
+                    FlutterError(
+                        code: "ROUTE_ERROR",
+                        message: "Error getting workout routes: \(error.localizedDescription)",
+                        details: nil))
+            } else {
+                result(routeDictionaries)
+            }
+        }
+    }
+
+    /// Looks up the workout with [workoutUUID] and returns its associated
+    /// GPS route, if any. Unlike the date-ranged WORKOUT_ROUTE query, this
+    /// uses `HKQuery.predicateForObjects(from:)` to find the real route
+    /// belonging to that exact workout, which works regardless of who
+    /// recorded it (Apple Watch, iPhone, or a third-party app), not just
+    /// routes written by this plugin.
+    func getWorkoutRoute(call: FlutterMethodCall, result: @escaping FlutterResult) {
+        guard let arguments = call.arguments as? NSDictionary,
+            let workoutUUIDString = arguments["workoutUUID"] as? String,
+            let workoutUUID = UUID(uuidString: workoutUUIDString)
+        else {
+            DispatchQueue.main.async {
+                result(
+                    FlutterError(
+                        code: "INVALID_ARGUMENTS",
+                        message: "workoutUUID is required and must be a valid UUID",
+                        details: nil))
+            }
+            return
+        }
+
+        let workoutPredicate = HKQuery.predicateForObject(with: workoutUUID)
+        let workoutQuery = HKSampleQuery(
+            sampleType: HKSampleType.workoutType(), predicate: workoutPredicate, limit: 1, sortDescriptors: nil
+        ) { [weak self] _, samplesOrNil, error in
+            guard let self = self else { return }
+
+            if let error = error {
+                DispatchQueue.main.async {
+                    result(
+                        FlutterError(
+                            code: "HEALTH_ERROR",
+                            message: "Error looking up workout: \(error.localizedDescription)",
+                            details: nil))
+                }
+                return
+            }
+
+            guard let workout = (samplesOrNil as? [HKWorkout])?.first else {
+                DispatchQueue.main.async {
+                    result(nil)
+                }
+                return
+            }
+
+            self.findWorkoutRoute(for: workout, workoutUUID: workoutUUIDString, result: result)
+        }
+
+        healthStore.execute(workoutQuery)
+    }
+
+    private func findWorkoutRoute(
+        for workout: HKWorkout,
+        workoutUUID: String,
+        result: @escaping FlutterResult
+    ) {
+        let routePredicate = HKQuery.predicateForObjects(from: workout)
+        let routeQuery = HKSampleQuery(
+            sampleType: HKSeriesType.workoutRoute(), predicate: routePredicate, limit: HKObjectQueryNoLimit,
+            sortDescriptors: nil
+        ) { [weak self] _, routeSamplesOrNil, routeError in
+            guard let self = self else { return }
+
+            if let routeError = routeError {
+                DispatchQueue.main.async {
+                    result(
+                        FlutterError(
+                            code: "ROUTE_ERROR",
+                            message: "Error looking up workout route: \(routeError.localizedDescription)",
+                            details: nil))
+                }
+                return
+            }
+
+            guard let routeSamples = routeSamplesOrNil as? [HKWorkoutRoute], !routeSamples.isEmpty else {
+                DispatchQueue.main.async {
+                    result(nil)
+                }
+                return
+            }
+
+            self.collectLocations(for: routeSamples) { locationsOrNil, collectError in
+                if let collectError = collectError {
+                    DispatchQueue.main.async {
+                        result(
+                            FlutterError(
+                                code: "ROUTE_ERROR",
+                                message: "Error getting workout route: \(collectError.localizedDescription)",
+                                details: nil))
+                    }
+                    return
+                }
+
+                let dictionary = self.buildWorkoutRouteDictionary(
+                    workoutUUID: workoutUUID, workout: workout, locations: locationsOrNil ?? [])
+                DispatchQueue.main.async {
+                    result(dictionary)
+                }
+            }
+        }
+
+        healthStore.execute(routeQuery)
+    }
+
+    /// Collects and time-sorts all GPS locations belonging to one or more
+    /// [HKWorkoutRoute] samples.
+    private func collectLocations(
+        for routes: [HKWorkoutRoute],
+        completion: @escaping ([CLLocation]?, Error?) -> Void
+    ) {
+        let dispatchGroup = DispatchGroup()
+        let synchronizationQueue = DispatchQueue(label: "cachet.plugins.health.workoutroute.collect")
+        var allLocations: [CLLocation] = []
+        var capturedError: Error?
+
+        for route in routes {
+            dispatchGroup.enter()
+            let routeQuery = HKWorkoutRouteQuery(route: route) { _, locationsOrNil, done, error in
+                if let error = error {
+                    synchronizationQueue.async {
+                        if capturedError == nil {
+                            capturedError = error
+                        }
+                    }
+                }
+
+                if let locations = locationsOrNil {
+                    synchronizationQueue.async {
+                        allLocations.append(contentsOf: locations)
+                    }
+                }
+
+                if done {
+                    synchronizationQueue.async {
+                        dispatchGroup.leave()
+                    }
+                }
+            }
+
+            healthStore.execute(routeQuery)
+        }
+
+        dispatchGroup.notify(queue: .main) {
+            if let error = capturedError {
+                completion(nil, error)
+            } else {
+                completion(allLocations.sorted { $0.timestamp < $1.timestamp }, nil)
+            }
+        }
+    }
+
+    private func mapLocationsToRoutePoints(_ locations: [CLLocation]) -> [NSDictionary] {
+        return locations.map { location in
+            var entry: [String: Any] = [
+                "latitude": location.coordinate.latitude,
+                "longitude": location.coordinate.longitude,
+                "timestamp": Int(location.timestamp.timeIntervalSince1970 * 1000),
+            ]
+
+            if location.horizontalAccuracy >= 0 {
+                entry["horizontalAccuracy"] = location.horizontalAccuracy
+            }
+            if location.verticalAccuracy >= 0 {
+                entry["verticalAccuracy"] = location.verticalAccuracy
+                entry["altitude"] = location.altitude
+            }
+            if location.speed >= 0 {
+                entry["speed"] = location.speed
+            }
+            if #available(iOS 13.4, *) {
+                if location.speedAccuracy >= 0 {
+                    entry["speedAccuracy"] = location.speedAccuracy
+                }
+            }
+            if location.course >= 0 && location.course <= 360 {
+                entry["course"] = location.course
+            }
+            if #available(iOS 13.4, *) {
+                if location.courseAccuracy >= 0 {
+                    entry["courseAccuracy"] = location.courseAccuracy
+                }
+            }
+
+            return entry as NSDictionary
+        }
+    }
+
+    private func buildWorkoutRouteDictionary(
+        route: HKWorkoutRoute,
+        locations: [CLLocation]
+    ) -> NSDictionary {
+        let routePoints = mapLocationsToRoutePoints(locations)
+
+        let startTimestamp = (routePoints.first?["timestamp"] as? Int)
+            ?? Int(route.startDate.timeIntervalSince1970 * 1000)
+        let endTimestamp = (routePoints.last?["timestamp"] as? Int)
+            ?? Int(route.endDate.timeIntervalSince1970 * 1000)
+
+        var dictionary: [String: Any] = [
+            "uuid": "\(route.uuid)",
+            "route": routePoints,
+            "date_from": startTimestamp,
+            "date_to": endTimestamp,
+            "source_id": route.sourceRevision.source.bundleIdentifier,
+            "source_name": route.sourceRevision.source.name,
+        ]
+
+        if let workoutUUID = route.metadata?["workout_uuid"] as? String {
+            dictionary["workout_uuid"] = workoutUUID
+        }
+
+        return dictionary as NSDictionary
+    }
+
+    /// Builds the route dictionary for a route looked up via
+    /// [findWorkoutRoute], where the workout link is known for certain
+    /// (unlike the metadata-based association in [buildWorkoutRouteDictionary]).
+    private func buildWorkoutRouteDictionary(
+        workoutUUID: String,
+        workout: HKWorkout,
+        locations: [CLLocation]
+    ) -> NSDictionary {
+        let routePoints = mapLocationsToRoutePoints(locations)
+
+        let startTimestamp = (routePoints.first?["timestamp"] as? Int)
+            ?? Int(workout.startDate.timeIntervalSince1970 * 1000)
+        let endTimestamp = (routePoints.last?["timestamp"] as? Int)
+            ?? Int(workout.endDate.timeIntervalSince1970 * 1000)
+
+        return [
+            "uuid": "\(workout.uuid)",
+            "route": routePoints,
+            "date_from": startTimestamp,
+            "date_to": endTimestamp,
+            "source_id": workout.sourceRevision.source.bundleIdentifier,
+            "source_name": workout.sourceRevision.source.name,
+            "workout_uuid": workoutUUID,
+        ] as NSDictionary
+    }
+
     @available(iOS 14.0, *)
     private func fetchEcgMeasurements(_ sample: HKElectrocardiogram) -> NSDictionary {
         let semaphore = DispatchSemaphore(value: 0)
@@ -1115,6 +1420,7 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
             
             dataTypesDict[EXERCISE_TIME] = HKSampleType.quantityType(forIdentifier: .appleExerciseTime)!
             dataTypesDict[WORKOUT] = HKSampleType.workoutType()
+            dataTypesDict[WORKOUT_ROUTE] = HKSeriesType.workoutRoute()
             dataTypesDict[NUTRITION] = HKSampleType.correlationType(
                 forIdentifier: .food)!
             
