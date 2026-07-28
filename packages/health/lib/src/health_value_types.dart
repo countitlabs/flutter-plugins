@@ -101,6 +101,12 @@ class AudiogramHealthValue extends HealthValue {
 /// * [totalEnergyBurnedUnit] - the unit of the total energy burned
 /// * [totalDistance] - the total distance of the workout
 /// * [totalDistanceUnit] - the unit of the total distance
+/// * [totalElevationAscended] - the total elevation ascended during the workout
+/// * [totalElevationAscendedUnit] - the unit of the total elevation ascended
+/// * [totalElevationDescended] - the total elevation descended during the workout
+/// * [totalElevationDescendedUnit] - the unit of the total elevation descended
+/// * [averageSpeed] - the average speed during the workout
+/// * [averageSpeedUnit] - the unit of the average speed
 class WorkoutHealthValue extends HealthValue {
   final double? _duration;
   final String? _durationUnit;
@@ -109,6 +115,12 @@ class WorkoutHealthValue extends HealthValue {
   HealthDataUnit? _totalEnergyBurnedUnit;
   int? _totalDistance;
   HealthDataUnit? _totalDistanceUnit;
+  double? _totalElevationAscended;
+  HealthDataUnit? _totalElevationAscendedUnit;
+  double? _totalElevationDescended;
+  HealthDataUnit? _totalElevationDescendedUnit;
+  double? _averageSpeed;
+  HealthDataUnit? _averageSpeedUnit;
   String? _activityName;
 
   WorkoutHealthValue(
@@ -119,6 +131,12 @@ class WorkoutHealthValue extends HealthValue {
       this._totalEnergyBurnedUnit,
       this._totalDistance,
       this._totalDistanceUnit,
+      this._totalElevationAscended,
+      this._totalElevationAscendedUnit,
+      this._totalElevationDescended,
+      this._totalElevationDescendedUnit,
+      this._averageSpeed,
+      this._averageSpeedUnit,
       this._activityName);
 
   /// The duration of the workout in seconds.
@@ -133,7 +151,6 @@ class WorkoutHealthValue extends HealthValue {
   /// The total energy burned during the workout.
   /// Might not be available for all workouts.
   int? get totalEnergyBurned => _totalEnergyBurned;
-
 
   // The name of the activity, if available.
   String? get activityName => _activityName;
@@ -150,12 +167,40 @@ class WorkoutHealthValue extends HealthValue {
   /// Might not be available for all workouts.
   HealthDataUnit? get totalDistanceUnit => _totalDistanceUnit;
 
+  /// The total elevation ascended during the workout.
+  /// Might not be available for all workouts.
+  double? get totalElevationAscended => _totalElevationAscended;
+
+  /// The unit of the total elevation ascended during the workout.
+  /// Might not be available for all workouts.
+  HealthDataUnit? get totalElevationAscendedUnit => _totalElevationAscendedUnit;
+
+  /// The total elevation descended during the workout.
+  /// Might not be available for all workouts.
+  double? get totalElevationDescended => _totalElevationDescended;
+
+  /// The unit of the total elevation descended during the workout.
+  /// Might not be available for all workouts.
+  HealthDataUnit? get totalElevationDescendedUnit =>
+      _totalElevationDescendedUnit;
+
+  /// The average speed during the workout.
+  /// Might not be available for all workouts.
+  double? get averageSpeed => _averageSpeed;
+
+  /// The unit of the average speed during the workout.
+  /// Might not be available for all workouts.
+  HealthDataUnit? get averageSpeedUnit => _averageSpeedUnit;
+
   factory WorkoutHealthValue.fromJson(json) {
     return WorkoutHealthValue(
         json['duration'] != null ? (json['duration'] as num).toDouble() : null,
-        json['durationUnit'] != null ? (json['durationUnit'] as String).toLowerCase() : null,
+        json['durationUnit'] != null
+            ? (json['durationUnit'] as String).toLowerCase()
+            : null,
         HealthWorkoutActivityType.values.firstWhereOrNull(
-            (element) => element.name == json['workoutActivityType']) ?? HealthWorkoutActivityType.UNRECOGNIZED,
+                (element) => element.name == json['workoutActivityType']) ??
+            HealthWorkoutActivityType.UNRECOGNIZED,
         json['totalEnergyBurned'] != null
             ? (json['totalEnergyBurned'] as num).toInt()
             : null,
@@ -170,8 +215,28 @@ class WorkoutHealthValue extends HealthValue {
             ? HealthDataUnit.values.firstWhere(
                 (element) => element.name == json['totalDistanceUnit'])
             : null,
-        json['activityName'] as String?
-            );
+        json['totalElevationAscended'] != null
+            ? (json['totalElevationAscended'] as num).toDouble()
+            : null,
+        json['totalElevationAscendedUnit'] != null
+            ? HealthDataUnit.values.firstWhere(
+                (element) => element.name == json['totalElevationAscendedUnit'])
+            : null,
+        json['totalElevationDescended'] != null
+            ? (json['totalElevationDescended'] as num).toDouble()
+            : null,
+        json['totalElevationDescendedUnit'] != null
+            ? HealthDataUnit.values.firstWhere((element) =>
+                element.name == json['totalElevationDescendedUnit'])
+            : null,
+        json['averageSpeed'] != null
+            ? (json['averageSpeed'] as num).toDouble()
+            : null,
+        json['averageSpeedUnit'] != null
+            ? HealthDataUnit.values.firstWhere(
+                (element) => element.name == json['averageSpeedUnit'])
+            : null,
+        json['activityName'] as String?);
   }
 
   @override
@@ -183,6 +248,12 @@ class WorkoutHealthValue extends HealthValue {
         'totalEnergyBurnedUnit': _totalEnergyBurnedUnit?.name,
         'totalDistance': _totalDistance,
         'totalDistanceUnit': _totalDistanceUnit?.name,
+        'totalElevationAscended': _totalElevationAscended,
+        'totalElevationAscendedUnit': _totalElevationAscendedUnit?.name,
+        'totalElevationDescended': _totalElevationDescended,
+        'totalElevationDescendedUnit': _totalElevationDescendedUnit?.name,
+        'averageSpeed': _averageSpeed,
+        'averageSpeedUnit': _averageSpeedUnit?.name,
       };
 
   @override
@@ -195,6 +266,12 @@ class WorkoutHealthValue extends HealthValue {
            totalEnergyBurnedUnit: ${totalEnergyBurnedUnit?.name},
            totalDistance: $totalDistance,
            totalDistanceUnit: ${totalDistanceUnit?.name},
+           totalElevationAscended: $totalElevationAscended,
+           totalElevationAscendedUnit: ${totalElevationAscendedUnit?.name},
+           totalElevationDescended: $totalElevationDescended,
+           totalElevationDescendedUnit: ${totalElevationDescendedUnit?.name},
+           averageSpeed: $averageSpeed,
+           averageSpeedUnit: ${averageSpeedUnit?.name},
            activityName: $activityName
            """;
   }
@@ -207,12 +284,29 @@ class WorkoutHealthValue extends HealthValue {
         this.totalEnergyBurnedUnit == o.totalEnergyBurnedUnit &&
         this.totalDistance == o.totalDistance &&
         this.totalDistanceUnit == o.totalDistanceUnit &&
+        this.totalElevationAscended == o.totalElevationAscended &&
+        this.totalElevationAscendedUnit == o.totalElevationAscendedUnit &&
+        this.totalElevationDescended == o.totalElevationDescended &&
+        this.totalElevationDescendedUnit == o.totalElevationDescendedUnit &&
+        this.averageSpeed == o.averageSpeed &&
+        this.averageSpeedUnit == o.averageSpeedUnit &&
         this.activityName == o.activityName;
   }
 
   @override
-  int get hashCode => Object.hash(workoutActivityType, totalEnergyBurned,
-      totalEnergyBurnedUnit, totalDistance, totalDistanceUnit, activityName);
+  int get hashCode => Object.hash(
+      workoutActivityType,
+      totalEnergyBurned,
+      totalEnergyBurnedUnit,
+      totalDistance,
+      totalDistanceUnit,
+      totalElevationAscended,
+      totalElevationAscendedUnit,
+      totalElevationDescended,
+      totalElevationDescendedUnit,
+      averageSpeed,
+      averageSpeedUnit,
+      activityName);
 }
 
 /// A [HealthValue] object for ECGs

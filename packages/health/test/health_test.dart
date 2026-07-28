@@ -92,6 +92,36 @@ void main() {
     });
   });
 
+  group('WorkoutHealthValue', () {
+    test('parses vertical metrics and average speed', () {
+      final value = WorkoutHealthValue.fromJson({
+        'workoutActivityType': 'HIKING',
+        'totalElevationAscended': 320.5,
+        'totalElevationAscendedUnit': 'METER',
+        'totalElevationDescended': 145.25,
+        'totalElevationDescendedUnit': 'METER',
+        'averageSpeed': 1.8,
+        'averageSpeedUnit': 'METER_PER_SECOND',
+      });
+
+      expect(value.totalElevationAscended, 320.5);
+      expect(value.totalElevationAscendedUnit, HealthDataUnit.METER);
+      expect(value.totalElevationDescended, 145.25);
+      expect(value.totalElevationDescendedUnit, HealthDataUnit.METER);
+      expect(value.averageSpeed, 1.8);
+      expect(value.averageSpeedUnit, HealthDataUnit.METER_PER_SECOND);
+    });
+
+    test('keeps optional workout metrics null when absent', () {
+      final value =
+          WorkoutHealthValue.fromJson({'workoutActivityType': 'HIKING'});
+
+      expect(value.totalElevationAscended, isNull);
+      expect(value.totalElevationDescended, isNull);
+      expect(value.averageSpeed, isNull);
+    });
+  });
+
   group('HealthDataPoint.fromJson', () {
     test('dispatches WORKOUT_ROUTE to WorkoutRouteHealthValue', () {
       final point = HealthDataPoint.fromJson({

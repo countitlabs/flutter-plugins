@@ -236,6 +236,9 @@ enum HealthDataUnit {
   YARD,
   MILE,
 
+  // Speed units
+  METER_PER_SECOND,
+
   // Volume units
   LITER,
   MILLILITER,

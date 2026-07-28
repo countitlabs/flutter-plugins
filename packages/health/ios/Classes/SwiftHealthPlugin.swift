@@ -689,6 +689,15 @@ public class SwiftHealthPlugin: NSObject, FlutterPlugin {
                         "totalEnergyBurnedUnit": "KILOCALORIE",
                         "totalDistance": sample.totalDistance?.doubleValue(for: HKUnit.meter()),
                         "totalDistanceUnit": "METER",
+                        "totalElevationAscended": (sample.metadata?[HKMetadataKeyElevationAscended] as? HKQuantity)?
+                            .doubleValue(for: HKUnit.meter()),
+                        "totalElevationAscendedUnit": "METER",
+                        "totalElevationDescended": (sample.metadata?[HKMetadataKeyElevationDescended] as? HKQuantity)?
+                            .doubleValue(for: HKUnit.meter()),
+                        "totalElevationDescendedUnit": "METER",
+                        "averageSpeed": (sample.metadata?[HKMetadataKeyAverageSpeed] as? HKQuantity)?
+                            .doubleValue(for: HKUnit.meter().unitDivided(by: HKUnit.second())),
+                        "averageSpeedUnit": "METER_PER_SECOND",
                         "date_from": Int(sample.startDate.timeIntervalSince1970 * 1000),
                         "date_to": Int(sample.endDate.timeIntervalSince1970 * 1000),
                         "source_id": sample.sourceRevision.source.bundleIdentifier,

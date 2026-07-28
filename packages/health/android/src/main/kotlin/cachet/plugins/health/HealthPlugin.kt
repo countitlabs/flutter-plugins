@@ -38,6 +38,7 @@ import com.google.android.gms.fitness.result.DataReadResponse
 import com.google.android.gms.fitness.result.SessionReadResponse
 import com.google.android.gms.tasks.OnFailureListener
 import com.google.android.gms.tasks.OnSuccessListener
+import com.google.android.gms.tasks.Tasks
 import io.flutter.embedding.engine.plugins.FlutterPlugin
 import io.flutter.embedding.engine.plugins.activity.ActivityAware
 import io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding
@@ -1078,6 +1079,7 @@ class HealthPlugin:
                         }
                     }
                 }
+                val averageSpeed = getAverageSpeedForSession(session)
                 healthData.add(
                     hashMapOf(
                         "workoutActivityType" to (
@@ -1090,6 +1092,8 @@ class HealthPlugin:
                         "totalEnergyBurnedUnit" to "KILOCALORIE",
                         "totalDistance" to if (totalDistance == 0.0) null else totalDistance,
                         "totalDistanceUnit" to "METER",
+                        "averageSpeed" to averageSpeed,
+                        "averageSpeedUnit" to "METER_PER_SECOND",
                         "date_from" to session.getStartTime(TimeUnit.MILLISECONDS),
                         "date_to" to session.getEndTime(TimeUnit.MILLISECONDS),
                         "unit" to "MINUTES",
@@ -1100,6 +1104,42 @@ class HealthPlugin:
             }
             Handler(context!!.mainLooper).run { result.success(healthData) }
         }
+
+    /**
+     * Reads the average speed for a workout session using Google Fit's own
+     * AGGREGATE_SPEED_SUMMARY, Runs blocking - callers must invoke this off the main thread.
+     */
+    private fun getAverageSpeedForSession(session: Session): Double? {
+        val appContext = context?.applicationContext ?: return null
+        return try {
+            val fitnessOptions = FitnessOptions.builder()
+                .addDataType(DataType.TYPE_SPEED, FitnessOptions.ACCESS_READ)
+                .addDataType(DataType.AGGREGATE_SPEED_SUMMARY, FitnessOptions.ACCESS_READ)
+                .build()
+            val googleSignInAccount =
+                GoogleSignIn.getAccountForExtension(appContext, fitnessOptions)
+            val sessionStart = session.getStartTime(TimeUnit.MILLISECONDS)
+            val sessionEnd = session.getEndTime(TimeUnit.MILLISECONDS)
+            val request = DataReadRequest.Builder()
+                .aggregate(DataType.TYPE_SPEED, DataType.AGGREGATE_SPEED_SUMMARY)
+                .bucketByTime((sessionEnd - sessionStart).toInt(), TimeUnit.MILLISECONDS)
+                .setTimeRange(sessionStart, sessionEnd, TimeUnit.MILLISECONDS)
+                .build()
+            val response = Tasks.await(
+                Fitness.getHistoryClient(appContext, googleSignInAccount).readData(request),
+            )
+            response.buckets
+                .flatMap { it.dataSets }
+                .flatMap { it.dataPoints }
+                .firstOrNull()
+                ?.getValue(Field.FIELD_AVERAGE)
+                ?.asFloat()
+                ?.toDouble()
+        } catch (e: Exception) {
+            Log.w("FLUTTER_HEALTH::ERROR", "There was an error getting average speed for session", e)
+            null
+        }
+    }
 
     private fun callToHealthTypes(call: MethodCall): FitnessOptions {
         val typesBuilder = FitnessOptions.builder()
